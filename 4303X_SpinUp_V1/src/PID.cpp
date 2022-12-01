@@ -4,9 +4,9 @@
 using namespace vex;
 #include "PID.h"
 
-double kP = 0.0;
-double kI = 0.0;
-double kD = 0.0;
+double kP = 1.4;
+double kI = 0.007;
+double kD = 5.5;
 double turnKP = 0.98;
 double turnKI = 0.001;
 double turnKD = 5.5;
@@ -24,9 +24,9 @@ void drivePID(double target, double angle, bool turnWhileDrive){
     double integral;
     double derivative;
     double prevError;
-    double kP = 0.0;
-    double kI = 0.0;
-    double kD = 0.0;
+    double kP = 1.4;
+    double kI = 0.007;
+    double kD = 5.5;
 
     while(fabs(error) > threshold){
       error = target - averagePosition;
@@ -89,9 +89,9 @@ void drivePID(double target, double angle, bool turnWhileDrive){
     double integral;
     double derivative;
     double prevError;
-    double kP = 0.0;
-    double kI = 0.0;
-    double kD = 0.0;
+    double kP = 1.4;
+    double kI = 0.007;
+    double kD = 5.5;
 
     double turnThreshold;
     double threshold;

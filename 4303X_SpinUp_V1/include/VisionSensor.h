@@ -1,6 +1,6 @@
 /*vex-vision-config:begin*/
 #include "vex.h"
-vex::vision::signature BLUEGOAL = vex::vision::signature (1, -2637, -705, -1671, 3811, 11281, 7546, 0.8, 0);
+vex::vision::signature BLUEGOAL = vex::vision::signature (1, -2637, -705, -1671, 3811, 11281, 7546, 1.7, 0);
 vex::vision::signature SIG_2 = vex::vision::signature (2, 0, 0, 0, 0, 0, 0, 2.5, 0);
 vex::vision::signature SIG_3 = vex::vision::signature (3, 0, 0, 0, 0, 0, 0, 2.5, 0);
 vex::vision::signature SIG_4 = vex::vision::signature (4, 0, 0, 0, 0, 0, 0, 2.5, 0);

@@ -13,6 +13,7 @@
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "stdio.h"
+#include "v5_apitypes.h"
 #include "vex.h"
 #include "VisionSensor.h"
 #include "Functions.h"
@@ -24,33 +25,53 @@ using namespace vex;
 // A global instance of competition
 competition Competition;
 
-void drawVision(){
-  while(pageSelect ==5){
-    Brain.Screen.clearScreen();
-    Brain.Screen.setOrigin(1, 1);
-    Brain.Screen.drawRectangle(0, 0, 316, 212);
 
-    Vision.takeSnapshot(BLUEGOAL);
-
-    if(Vision.largestObject.exists){
-      Brain.Screen.drawRectangle(Vision.largestObject.originX, Vision.largestObject.originY, Vision.largestObject.width, Vision.largestObject.height, color::blue);
-    }
-    
-    task::sleep(200);
-
-  }
-}
 
 //Functions and/or Variables//
 #define TARGET 150
 
+void VisionNew(){
+  while(1){
+    if(Vision.installed() == true){
+      if(Vision.largestObject.exists){
+        vex::vision::object obj = Vision.objects[0];
+      if((obj.centerY != 0 && obj.width > 20 && obj.height > 20) || (Vision.objects[0].centerX && Vision.objects[0].centerX < 165)){
+        int error = obj.centerY - TARGET;
+
+        //simple P (in PID) Control
+        int drive = error;
+        if(drive > 50) drive = 50;
+        if(drive < -50) drive = -50;
+
+        //once object found and centered
+        if(obj.centerY > (TARGET-15) && obj.centerY < (TARGET+15)){
+          RightDrive.stop(brakeType::hold);
+          LeftDrive.stop(brakeType::hold);
+          return;
+        }else{
+          LeftDrive.spin(directionType::fwd, drive, velocityUnits::rpm);
+          RightDrive.spin(directionType::rev, drive, velocityUnits::rpm);
+        }
+      }
+    }else{
+      LeftDrive.spin(directionType::fwd, 50, velocityUnits::rpm);
+      RightDrive.spin(directionType::rev, 50, velocityUnits::rpm);
+    }
+    if(Controller1.ButtonX.pressing()){
+      LeftDrive.stop(brakeType::brake);
+      RightDrive.stop(brakeType::brake);
+      return;
+      }
+    }
+  }
+}
 void VisionBlue(){
   while(1){
   if(Vision.installed() == true){
     int numberObjects = Vision.takeSnapshot(BLUEGOAL);
     if (numberObjects > 0){
       vex::vision::object obj = Vision.objects[0];
-      if(obj.centerY != 0 && obj.width > 20 && obj.height > 20/*Vision.objects[0].centerX && Vision.objects[0].centerX < 165*/){
+      if((obj.centerY != 0 && obj.width > 20 && obj.height > 20) || (Vision.objects[0].centerX && Vision.objects[0].centerX < 165)){
         int error = obj.centerY - TARGET;
 
         //simple P (in PID) Control
@@ -95,7 +116,7 @@ void pre_auton(void) {
   flywheelPct = 75;
   autonSelect = 0;
   pageSelect = 0;
-  manVelocity = 1000;
+  manVelocity = 2200;
   double screenKP = 0;
   double screenKI = 0;
   double screenKD = 0;
@@ -110,15 +131,12 @@ void pre_auton(void) {
   Inertial.calibrate(2000);
   task::sleep(2000);
   Controller1.Screen.clearScreen();
-  Controller1.Screen.setCursor(1, 1);
-  Controller1.Screen.print("Flywheel Vel");
-  Controller1.Screen.setCursor(1, 10);
-  Controller1.Screen.print(static_cast<int>(manVelocity));
 
   Flywheel.setVelocity(flywheelPct, velocityUnits::pct);
+  Intake.setVelocity(100, percentUnits::pct);
   RightFlywheel.setBrake(brakeType::coast);
   LeftFlywheel.setBrake(brakeType::coast);
-  Intake.setBrake(brakeType::coast);
+  Intake.setBrake(brakeType::brake);
   RightDriveMotorA.setBrake(brakeType::brake);
   RightDriveMotorB.setBrake(brakeType::brake);
   LeftDriveMotorA.setBrake(brakeType::brake);
@@ -244,11 +262,10 @@ if(pageSelect == 3){
         Brain.Screen.print(static_cast<int>(flywheelPct));
       }
   }if(Brain.Screen.xPosition() < 470 && Brain.Screen.xPosition() > 365 && Brain.Screen.yPosition() < 100){
-    wait(250, timeUnits::msec);
+      wait(250, timeUnits::msec);
     Brain.Screen.setCursor(8, 35);
     Brain.Screen.print("SPINNING!");
     Flywheel.spin(directionType::fwd, flywheelPct, percentUnits::pct);
-    if((Flywheel.velocity(velocityUnits::pct) +- 2.5) == flywheelPct){
       wait(2.5, timeUnits::sec);
       Flywheel.spin(directionType::fwd, flywheelPct, percentUnits::pct);
       Brain.Screen.clearLine(8);
@@ -260,7 +277,6 @@ if(pageSelect == 3){
       wait(100, timeUnits::msec);
       Piston.set(false);
       pistonOutOn = true;
-    }if(pistonOutOn == true){
       wait(250, timeUnits::msec);
       Flywheel.stop(brakeType::coast);
       Brain.Screen.clearScreen();
@@ -268,7 +284,6 @@ if(pageSelect == 3){
       Brain.Screen.setPenColor(black);
       Brain.Screen.setCursor(2, 23);
       Brain.Screen.print(static_cast<int>(flywheelPct));
-    }
   }
 }
 if(pageSelect == 4){
@@ -348,19 +363,36 @@ if(pageSelect == 4){
       pageSelect = 6;
   }
 }if(pageSelect == 5){
+  Brain.Screen.clearScreen();
   drawVariableMenu();
   while(pageSelect ==5){
-    Brain.Screen.clearScreen();
+    
     Brain.Screen.setOrigin(1, 1);
-    Brain.Screen.drawRectangle(0, 0, 316, 212);
+    Brain.Screen.setFillColor(black);
+    Brain.Screen.drawRectangle(0, 50, 316, 212);
 
     Vision.takeSnapshot(BLUEGOAL);
 
     if(Vision.largestObject.exists){
+      Brain.Screen.setFillColor(blue);
       Brain.Screen.drawRectangle(Vision.largestObject.originX, Vision.largestObject.originY, Vision.largestObject.width, Vision.largestObject.height, color::blue);
     }
     
     task::sleep(200);
+
+    if(Brain.Screen.xPosition() < 435 && Brain.Screen.xPosition() > 330){
+    wait(250, timeUnits::msec);
+    Brain.Screen.clearScreen();
+    drawVariableMenu();
+    drawVariableTest();
+    pageSelect = 6;
+  }if(Brain.Screen.xPosition() < 205 && Brain.Screen.xPosition() > 5 && Brain.Screen.yPosition() < 45 && Brain.Screen.yPosition() > 5){
+    wait(250, timeUnits::msec);
+    Brain.Screen.clearScreen();
+    drawVariableMenu();
+    drawVariableControl();
+    pageSelect = 4;
+  }
 
   }
 }if(pageSelect == 6){
@@ -368,7 +400,17 @@ if(pageSelect == 4){
     Brain.Screen.setFillColor(white);
     Brain.Screen.drawRectangle(20, 200, 440, 10);
     autonSelect = 0;
-  if(Brain.Screen.xPosition() < 240 && Brain.Screen.xPosition() > 135){
+  if(Brain.Screen.xPosition() < 205 && Brain.Screen.xPosition() > 5 && Brain.Screen.yPosition() < 45 && Brain.Screen.yPosition() > 5){
+    wait(250, timeUnits::msec);
+    Brain.Screen.clearScreen();
+    drawVariableMenu();
+    drawVariableControl();
+    pageSelect = 4;
+  }if(Brain.Screen.xPosition() < 320 && Brain.Screen.xPosition() > 215 && Brain.Screen.yPosition() < 45 && Brain.Screen.yPosition() > 5){
+      wait(250, timeUnits::msec);
+      Brain.Screen.clearScreen();
+      pageSelect = 5;
+  }if(Brain.Screen.xPosition() < 240 && Brain.Screen.xPosition() > 135 && Brain.Screen.yPosition() > 50){
     wait(250, timeUnits::msec);
     Brain.Screen.clearScreen();
     drawVariableMenu();
@@ -376,7 +418,7 @@ if(pageSelect == 4){
     Brain.Screen.setFillColor(red);
     Brain.Screen.drawRectangle(20, 200, 440, 10);
     autonSelect = 1;
-  }if(Brain.Screen.xPosition() < 355 && Brain.Screen.xPosition() > 250){
+  }if(Brain.Screen.xPosition() < 355 && Brain.Screen.xPosition() > 250 && Brain.Screen.yPosition() > 50){
     wait(250, timeUnits::msec);
     Brain.Screen.clearScreen();
     drawVariableMenu();
@@ -384,7 +426,7 @@ if(pageSelect == 4){
     Brain.Screen.setFillColor(blue);
     Brain.Screen.drawRectangle(20, 200, 440, 10);
     autonSelect = 2;
-  }if(Brain.Screen.xPosition() < 470 && Brain.Screen.xPosition() > 365){
+  }if(Brain.Screen.xPosition() < 470 && Brain.Screen.xPosition() > 365 && Brain.Screen.yPosition() > 50){
     wait(250, timeUnits::msec);
     Brain.Screen.clearScreen();
     drawVariableMenu();
@@ -405,12 +447,12 @@ if(pageSelect == 4){
         kI = screenKI;
         kD = screenKD;
         drivePID(15, 0, false);
-      }if(autonSelect == 2){
+      }else if(autonSelect == 2){
         turnKP = screenTurnKP;
         turnKI = screenTurnKI;
         turnKD = screenTurnKD;
         gyroPID(90);
-      }if(autonSelect == 3){
+      }else if(autonSelect == 3){
         kP = screenKP;
         kI = screenKI;
         kD = screenKD;
@@ -463,7 +505,7 @@ void autonomous(void) {
         }
     }
   }*/
-  drivePID(20, 35, false);
+  drivePID(20, 90, false);
 }
 
 
@@ -471,12 +513,14 @@ void usercontrol(void) {
   // User control code here, inside the loop
   while (1) {
     
-  Controller1.Screen.clearScreen();
   Controller1.Screen.setCursor(1, 1);
-  Controller1.Screen.print("Flywheel Vel");
-  Controller1.Screen.setCursor(1, 10);
-    Controller1.Screen.print(static_cast<int>(manVelocity));
-    Flywheel.setVelocity(100, percentUnits::pct);                                           //Flywheel will always be set to a velocity of 100%
+  Controller1.Screen.print("FlyVel:");
+  Controller1.Screen.setCursor(1, 10); 
+  Controller1.Screen.print(static_cast<int>(Flywheel.velocity(percentUnits::pct)));
+  Controller1.Screen.setCursor(2, 1);
+  Controller1.Screen.print("FlyTemp:");
+  Controller1.Screen.setCursor(2, 10);
+  Controller1.Screen.print(static_cast<int>(Flywheel.temperature(temperatureUnits::celsius)));
 
     LeftDrive.spin(directionType::fwd, Controller1.Axis2.position(), velocityUnits::pct);
     RightDrive.spin(directionType::fwd, Controller1.Axis3.position(), velocityUnits::pct);   //Using Tank drive control
@@ -489,41 +533,33 @@ void usercontrol(void) {
       Intake.stop(brakeType::coast);
     }
 
-    if(Controller1.ButtonRight.pressing()){                                                //Allow us to change the speed of the flywheel by an increment of +- 100
-      manVelocity = manVelocity + 100;
-      Flywheel.setVelocity((manVelocity/6), velocityUnits::rpm);
-    }if(Controller1.ButtonLeft.pressing()){
-      manVelocity = manVelocity - 100;
-      Flywheel.setVelocity((manVelocity/6), velocityUnits::rpm);
-    }
 
     if(Controller1.ButtonA.pressing()){
       Flywheel.spin(directionType::fwd);
+    }if(Controller1.ButtonY.pressing()){
+      Flywheel.stop(brakeType::coast);
     }
 
     Controller1.ButtonX.pressed(VisionBlue);
-    if(Controller1.ButtonA.pressing()){   
-      Flywheel.spin(directionType::fwd);                                                  //Once button is pressed, the flywheel will start to rev up
-        if(pistonOutOn == true && ((Flywheel.velocity(velocityUnits::pct) == (manVelocity +- 5)))){        
-          for(int i = 0; i < 3; i++){                                                     //Once the flywheel has hit 100% speed, it will shot the disc 3 times every 0.5 seconds
-            Piston.set(true); 
-            pistonOutOn = false;
-            wait(0.25, timeUnits::sec);
-            Piston.set(false);
-            pistonOutOn = true;
-            wait(0.25, timeUnits::sec);
-          }
-        }else{
-          Flywheel.stop(brakeType::coast);                                                  //the flywheel will slowly come to a halt to ensure the flywheel motor does not burn out from the pressure
-          Piston.set(false);
-          pistonOutOn = true;
-          wait(0.5, timeUnits::sec);
-        } 
+
+    if(Controller1.ButtonR1.pressing()){
+      Piston.set(false);
+      pistonOutOn = true;
+    }else if(Controller1.ButtonR2.pressing()){
+      Piston.set(true);
+      pistonOutOn = false;
     }
-    wait(20, msec); // Sleep the task for a short amount of time to
+
+    if(Controller1.ButtonL1.pressing()){
+      Flywheel.spin(directionType::fwd, 100, percentUnits::pct);
+    }else{
+      Flywheel.stop(brakeType::coast);
+    }  
+      
+      wait(20, msec); // Sleep the task for a short amount of time to
                     // prevent wasted resources.
+    }
   }
-}
 
 //
 // Main will set up the competition functions and callbacks.

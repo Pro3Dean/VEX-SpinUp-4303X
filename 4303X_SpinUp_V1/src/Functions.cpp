@@ -2,11 +2,16 @@
 #include "vex_vision.h"
 using namespace vex;
 #include "Functions.h"
-#include "PID.h"
 
 int autonSelect = 0;
 int pageSelect = 0;  //pageSelect 0 is menu, 1 is red and blue, 2 is skills, 3 is flywheel, 4 is variables, 5 is vision, 6 is variable test
 int flywheelPct = 75;
+  double screenKP = 0;
+  double screenKI = 0;
+  double screenKD = 0;
+  double screenTurnKP = 0.98;
+  double screenTurnKI = 0.001;
+  double screenTurnKD = 5.5;
 
 void drawMenuScreen(){
   Brain.Screen.setPenColor(color::white);
@@ -43,29 +48,29 @@ void drawVariableTest(){
   Brain.Screen.setFillColor(red);
   
   Brain.Screen.drawRectangle(135, 50, 105, 80);
-  Brain.Screen.setCursor(3, 16);
+  Brain.Screen.setCursor(5, 16);
   Brain.Screen.print("drivePID");
   
   Brain.Screen.setFillColor(blue);
   Brain.Screen.drawRectangle(250, 50, 105, 80);
-  Brain.Screen.setCursor(3, 28);
+  Brain.Screen.setCursor(5, 28);
   Brain.Screen.print("gyroPID");
 
   Brain.Screen.setFillColor(yellow);
   Brain.Screen.drawRectangle(365, 50, 105, 80);
-  Brain.Screen.setCursor(3, 38);
+  Brain.Screen.setCursor(5, 36);
   Brain.Screen.setPenColor(black);
   Brain.Screen.print("turnWhileDrive");
 
   Brain.Screen.setFillColor(white);
   Brain.Screen.drawRectangle(200, 135, 105, 60);
-  Brain.Screen.setCursor(8, 24);
+  Brain.Screen.setCursor(9, 24);
   Brain.Screen.setPenColor(black);
   Brain.Screen.print("Back");
 
   Brain.Screen.setFillColor(orange);
-  Brain.Screen.drawRectangle(5, 20, 105, 80);
-  Brain.Screen.setCursor(3, 38);
+  Brain.Screen.drawRectangle(5, 50, 105, 80);
+  Brain.Screen.setCursor(5, 5);
   Brain.Screen.print("PLAY");
 }
 
@@ -141,7 +146,7 @@ void drawVariableControl(){
   Brain.Screen.drawRectangle(20, 125, 50, 50);
   Brain.Screen.setCursor(8, 3);
   Brain.Screen.setPenColor(black);
-  Brain.Screen.print(static_cast<double>(kP));
+  Brain.Screen.print(static_cast<double>(screenKP));
   Brain.Screen.setPenColor(black);
   Brain.Screen.setFillColor(white);
   Brain.Screen.drawRectangle(25, 85, 40, 40);
@@ -159,7 +164,7 @@ void drawVariableControl(){
   Brain.Screen.drawRectangle(90, 125, 50, 50);
   Brain.Screen.setCursor(8, 10);
   Brain.Screen.setPenColor(black);
-  Brain.Screen.print(static_cast<double>(kI));
+  Brain.Screen.print(static_cast<double>(screenKI));
   Brain.Screen.setPenColor(black);
   Brain.Screen.setFillColor(white);
   Brain.Screen.drawRectangle(95, 85, 40, 40);
@@ -177,7 +182,7 @@ void drawVariableControl(){
   Brain.Screen.drawRectangle(160, 125, 50, 50);
   Brain.Screen.setCursor(8, 18);
   Brain.Screen.setPenColor(black);
-  Brain.Screen.print(static_cast<double>(kD));
+  Brain.Screen.print(static_cast<double>(screenKD));
   Brain.Screen.setPenColor(black);
   Brain.Screen.setFillColor(white);
   Brain.Screen.drawRectangle(165, 85, 40, 40);
@@ -195,7 +200,7 @@ void drawVariableControl(){
   Brain.Screen.drawRectangle(225, 125, 50, 50);
   Brain.Screen.setCursor(8, 24);
   Brain.Screen.setPenColor(black);
-  Brain.Screen.print(static_cast<double>(turnKP));
+  Brain.Screen.print(static_cast<double>(screenTurnKP));
   Brain.Screen.setPenColor(black);
   Brain.Screen.setFillColor(white);
   Brain.Screen.drawRectangle(230, 85, 40, 40);
@@ -213,7 +218,7 @@ void drawVariableControl(){
   Brain.Screen.drawRectangle(290, 125, 50, 50);
   Brain.Screen.setCursor(8, 30);
   Brain.Screen.setPenColor(black);
-  Brain.Screen.print(static_cast<double>(turnKI));
+  Brain.Screen.print(static_cast<double>(screenTurnKI));
   Brain.Screen.setPenColor(black);
   Brain.Screen.setFillColor(white);
   Brain.Screen.drawRectangle(295, 85, 40, 40);
@@ -231,7 +236,7 @@ void drawVariableControl(){
   Brain.Screen.drawRectangle(360, 125, 50, 50);
   Brain.Screen.setCursor(8, 37);
   Brain.Screen.setPenColor(black);
-  Brain.Screen.print(static_cast<double>(turnKD));
+  Brain.Screen.print(static_cast<double>(screenTurnKD));
   Brain.Screen.setPenColor(black);
   Brain.Screen.setFillColor(white);
   Brain.Screen.drawRectangle(365, 85, 40, 40);
@@ -303,23 +308,17 @@ double torque = 2.1;
 double manVelocity = 1000;
 bool pistonOutOn = false;
 
-void RPM_Adjuster(){
-  if(Distance.objectDistance(distanceUnits::in) < 12 || Distance.objectDistance(distanceUnits::in) > 6){
-    Flywheel.setVelocity((2000.0/6), velocityUnits::rpm);
-    speed = RightFlywheel.velocity(velocityUnits::rpm);
-  }else if(Distance.objectDistance(distanceUnits::in) < 18 || Distance.objectDistance(distanceUnits::in) > 12){
-    Flywheel.setVelocity((3000.0/7), velocityUnits::rpm);
-    speed = RightFlywheel.velocity(velocityUnits::rpm);
-  }
-}
-
 void velocityChange(){
   if(Distance.isObjectDetected() == 1){
-    speed = Distance.objectDistance(distanceUnits::in)/2;
+    speed = Distance.objectDistance(distanceUnits::in)/3.5;
+    if(speed > 600){
+      speed = 600;
+    }if(speed < 400){
+      speed = 400;
+    }
     Flywheel.setVelocity(speed, velocityUnits::rpm);
   }if(Distance.isObjectDetected() == 0){
-    speed = Distance.objectDistance(distanceUnits::in)/5;
-    Flywheel.setVelocity(speed, velocityUnits::rpm);
+    Flywheel.setVelocity(525, velocityUnits::rpm);
   }
 }
 
